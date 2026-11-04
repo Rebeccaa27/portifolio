@@ -14,4 +14,3 @@ Envie estes arquivos e a pasta `assets` para a raiz de um repositório público.
 - Imagens: `assets/`.
 
 Os prints foram fornecidos pela autora. Os textos descrevem as funcionalidades relatadas, sem métricas de impacto não verificadas. Projetos de IA generativa poderão ser acrescentados quando o material estiver pronto.
-
