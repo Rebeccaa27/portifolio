@@ -14,54 +14,6 @@ document.querySelector('#close-viewer').addEventListener('click', () => viewer.c
 viewer.addEventListener('close', () => document.body.classList.remove('modal-open'));
 viewer.addEventListener('click', event => { if (event.target === viewer) viewer.close(); });
 
-// Native horizontal scrolling supports touch, trackpads and keyboard navigation.
-const track = document.querySelector('#project-track');
-const slides = [...track.querySelectorAll('.project')];
-const dots = [...document.querySelectorAll('.slide-dots button')];
-const previous = document.querySelector('#prev-project');
-const next = document.querySelector('#next-project');
-const counter = document.querySelector('.slide-count');
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-let activeSlide = 0;
-let scrollFrame;
-function nearestSlide() {
-  const left = track.getBoundingClientRect().left;
-  return slides.reduce((best, slide, index) =>
-    Math.abs(slide.getBoundingClientRect().left - left) < Math.abs(slides[best].getBoundingClientRect().left - left) ? index : best, 0);
-}
-function updateControls() {
-  activeSlide = nearestSlide();
-  previous.disabled = activeSlide === 0;
-  next.disabled = activeSlide === slides.length - 1;
-  counter.textContent = `${String(activeSlide + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
-  dots.forEach((dot, index) => {
-    if (index === activeSlide) dot.setAttribute('aria-current', 'true');
-    else dot.removeAttribute('aria-current');
-  });
-}
-function goToSlide(index) {
-  const destination = slides[Math.max(0, Math.min(slides.length - 1, index))];
-  const offset = destination.getBoundingClientRect().left - track.getBoundingClientRect().left;
-  track.scrollTo({ left: track.scrollLeft + offset, behavior: reducedMotion.matches ? 'instant' : 'smooth' });
-}
-previous.addEventListener('click', () => goToSlide(activeSlide - 1));
-next.addEventListener('click', () => goToSlide(activeSlide + 1));
-dots.forEach((dot, index) => dot.addEventListener('click', () => goToSlide(index)));
-track.addEventListener('scroll', () => {
-  cancelAnimationFrame(scrollFrame);
-  scrollFrame = requestAnimationFrame(updateControls);
-}, { passive: true });
-track.addEventListener('keydown', event => {
-  if (event.target !== track) return;
-  const directions = { ArrowRight: activeSlide + 1, ArrowLeft: activeSlide - 1, Home: 0, End: slides.length - 1 };
-  if (Object.hasOwn(directions, event.key)) {
-    event.preventDefault();
-    goToSlide(directions[event.key]);
-  }
-});
-window.addEventListener('resize', updateControls);
-updateControls();
-
 // One independent conversation gallery per AI project.
 const aiProjects = (window.portfolioAIProjects || []).filter(project => Array.isArray(project.images) && project.images.length > 0);
 const galleryRoot = document.querySelector('#ai-galleries');
@@ -122,30 +74,26 @@ aiProjects.forEach(project => {
 });
 viewer.addEventListener('close', () => viewer.classList.remove('conversation-viewer'));
 
-// Decorative lens: core content stays readable without mouse interaction.
-const lensArea = document.querySelector('#lens-area');
-const lensMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
-let lensFrame = 0;
-function configureLens() {
-  lensArea?.classList.toggle('lens-ready', lensMedia.matches && !reducedMotion.matches);
-}
-if (lensArea) {
-  lensArea.addEventListener('pointermove', event => {
-    if (!lensArea.classList.contains('lens-ready')) return;
-    cancelAnimationFrame(lensFrame);
-    lensFrame = requestAnimationFrame(() => {
-      const bounds = lensArea.getBoundingClientRect();
-      lensArea.style.setProperty('--mx', `${event.clientX - bounds.left}px`);
-      lensArea.style.setProperty('--my', `${event.clientY - bounds.top}px`);
-    });
+
+// Global cursor accent. Native cursor and click targets remain intact.
+const halo = document.querySelector('#cursor-halo');
+const cursorMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let cursorFrame = 0;
+function hideHalo() { cancelAnimationFrame(cursorFrame); halo.classList.remove('visible'); }
+document.addEventListener('pointermove', event => {
+  if (!cursorMedia.matches || reducedMotion.matches || event.pointerType === 'touch' || viewer.open) { hideHalo(); return; }
+  cancelAnimationFrame(cursorFrame);
+  cursorFrame = requestAnimationFrame(() => {
+    halo.style.left = `${event.clientX}px`;
+    halo.style.top = `${event.clientY}px`;
+    halo.classList.add('visible');
+    halo.classList.toggle('over-control', Boolean(event.target.closest('a,button,summary')));
   });
-  lensArea.addEventListener('pointerleave', () => {
-    cancelAnimationFrame(lensFrame);
-    lensArea.style.removeProperty('--mx');
-    lensArea.style.removeProperty('--my');
-  });
-  lensMedia.addEventListener('change', configureLens);
-  reducedMotion.addEventListener('change', configureLens);
-  configureLens();
-}
+}, { passive: true });
+document.documentElement.addEventListener('pointerleave', hideHalo);
+window.addEventListener('blur', hideHalo);
+document.addEventListener('keydown', hideHalo);
+reducedMotion.addEventListener('change', hideHalo);
+cursorMedia.addEventListener('change', hideHalo);
 
