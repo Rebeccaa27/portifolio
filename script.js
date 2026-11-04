@@ -62,3 +62,63 @@ track.addEventListener('keydown', event => {
 window.addEventListener('resize', updateControls);
 updateControls();
 
+// One independent conversation gallery per AI project.
+const aiProjects = (window.portfolioAIProjects || []).filter(project => Array.isArray(project.images) && project.images.length > 0);
+const galleryRoot = document.querySelector('#ai-galleries');
+if (aiProjects.length) galleryRoot.replaceChildren();
+aiProjects.forEach(project => {
+  let current = 0;
+  const card = document.createElement('article');
+  card.className = 'ai-card';
+  const heading = document.createElement('h3');
+  heading.textContent = project.name;
+  const description = document.createElement('p');
+  description.textContent = project.description;
+  const stage = document.createElement('button');
+  stage.type = 'button';
+  stage.className = 'conversation-stage';
+  stage.setAttribute('aria-label', `Ampliar conversa de ${project.name}`);
+  const picture = document.createElement('img');
+  picture.loading = 'lazy';
+  const enlarge = document.createElement('span');
+  enlarge.className = 'zoom';
+  enlarge.textContent = 'Ver a conversa maior ↗';
+  stage.append(picture, enlarge);
+  const caption = document.createElement('p');
+  caption.className = 'conversation-caption';
+  const controls = document.createElement('div');
+  controls.className = 'conversation-controls';
+  const back = document.createElement('button');
+  back.type = 'button'; back.textContent = '←'; back.setAttribute('aria-label', `Print anterior de ${project.name}`);
+  const position = document.createElement('span');
+  position.setAttribute('aria-live', 'polite');
+  position.setAttribute('aria-atomic', 'true');
+  const forward = document.createElement('button');
+  forward.type = 'button'; forward.textContent = '→'; forward.setAttribute('aria-label', `Próximo print de ${project.name}`);
+  function renderConversation() {
+    const item = project.images[current];
+    picture.src = item.src;
+    picture.alt = item.alt || `${project.name}: print ${current + 1} da conversa`;
+    caption.textContent = item.caption || '';
+    position.textContent = `Print ${current + 1} de ${project.images.length}`;
+    back.disabled = current === 0;
+    forward.disabled = current === project.images.length - 1;
+  }
+  back.addEventListener('click', () => { if (current > 0) { current--; renderConversation(); } });
+  forward.addEventListener('click', () => { if (current < project.images.length - 1) { current++; renderConversation(); } });
+  stage.addEventListener('click', () => {
+    viewerImage.src = picture.src;
+    viewerImage.alt = picture.alt;
+    viewer.classList.add('conversation-viewer');
+    document.querySelector('#viewer-title').textContent = `${project.name} — print ${current + 1} de ${project.images.length}`;
+    viewer.showModal();
+    document.body.classList.add('modal-open');
+    document.querySelector('.viewer-scroll').scrollTo(0, 0);
+  });
+  controls.append(back, position, forward);
+  card.append(heading, description, stage, caption, controls);
+  galleryRoot.append(card);
+  renderConversation();
+});
+viewer.addEventListener('close', () => viewer.classList.remove('conversation-viewer'));
+
