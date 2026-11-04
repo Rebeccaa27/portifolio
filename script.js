@@ -75,25 +75,133 @@ aiProjects.forEach(project => {
 viewer.addEventListener('close', () => viewer.classList.remove('conversation-viewer'));
 
 
-// Global cursor accent. Native cursor and click targets remain intact.
+
+const sectionPopup = document.querySelector('#section-popup');
+const popupContent = document.querySelector('#popup-content');
+const popupTitles = { perfil: 'Perfil & formação', projetos: 'Automações', ias: 'IA em ação', codigo: 'Desenvolvimento com IA' };
+let movedSection = null;
+let sectionPlaceholder = null;
+function syncScrollLock() {
+  document.body.classList.toggle('modal-open', viewer.open || sectionPopup.open);
+}
+function restoreSection() {
+  if (movedSection && sectionPlaceholder) sectionPlaceholder.replaceWith(movedSection);
+  movedSection = null;
+  sectionPlaceholder = null;
+}
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  const id = link.getAttribute('href').slice(1);
+  if (!popupTitles[id]) return;
+  link.setAttribute('aria-haspopup', 'dialog');
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    restoreSection();
+    const section = document.getElementById(id);
+    sectionPlaceholder = document.createComment('section home');
+    section.before(sectionPlaceholder);
+    movedSection = section;
+    popupContent.replaceChildren(section);
+    document.querySelector('#section-popup-title').textContent = popupTitles[id];
+    if (!sectionPopup.open) sectionPopup.showModal();
+    popupContent.scrollTop = 0;
+    syncScrollLock();
+    refreshLens();
+  });
+});
+document.querySelector('#close-section').addEventListener('click', () => sectionPopup.close());
+sectionPopup.addEventListener('close', () => {
+  if (!sectionPopup.open) restoreSection();
+  syncScrollLock();
+  refreshLens();
+});
+sectionPopup.addEventListener('click', event => {
+  const bounds = sectionPopup.getBoundingClientRect();
+  if (event.target === sectionPopup && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) sectionPopup.close();
+});
+viewer.addEventListener('close', () => { syncScrollLock(); refreshLens(); });
+
+// Real 1.5x magnification of a non-interactive copy of the visible layout.
 const halo = document.querySelector('#cursor-halo');
+const magnified = halo.querySelector('.magnified-content');
+const lensToggle = document.querySelector('#lens-toggle');
 const cursorMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-let cursorFrame = 0;
-function hideHalo() { cancelAnimationFrame(cursorFrame); halo.classList.remove('visible'); }
+let lensEnabled = true;
+let lensDirty = true;
+let lensFrame = 0;
+let pointerPosition = null;
+function refreshLens() { lensDirty = true; halo.classList.remove('visible'); }
+function clearClone(clone) {
+  clone.querySelectorAll('script,#cursor-halo,#lens-toggle').forEach(node => node.remove());
+  clone.removeAttribute('id');
+  clone.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+  clone.setAttribute('aria-hidden', 'true');
+  clone.inert = true;
+  return clone;
+}
+function rebuildLens() {
+  magnified.replaceChildren();
+  magnified.style.width = `${document.documentElement.clientWidth}px`;
+  const modal = viewer.open ? viewer : sectionPopup.open ? sectionPopup : null;
+  const parent = modal || document.body;
+  if (halo.parentNode !== parent) parent.append(halo);
+  if (modal) {
+    const bounds = modal.getBoundingClientRect();
+    const copy = clearClone(modal.cloneNode(true));
+    Object.assign(copy.style, { position: 'absolute', margin: '0', left: `${bounds.left}px`, top: `${bounds.top + window.scrollY}px`, width: `${bounds.width}px`, height: `${bounds.height}px`, maxHeight: 'none', maxWidth: 'none' });
+    magnified.append(copy);
+    const sourceScroller = modal.querySelector('.popup-content,.viewer-scroll');
+    const cloneScroller = copy.querySelector('.popup-content,.viewer-scroll');
+    if (sourceScroller && cloneScroller) {
+      cloneScroller.scrollTop = sourceScroller.scrollTop;
+      cloneScroller.scrollLeft = sourceScroller.scrollLeft;
+    }
+  } else {
+    for (const source of [...document.body.children]) {
+      if (source.matches('header,main,footer')) magnified.append(clearClone(source.cloneNode(true)));
+    }
+  }
+  lensDirty = false;
+}
+function paintLens() {
+  if (!pointerPosition || !lensEnabled || !cursorMedia.matches || reducedMotion.matches) { halo.classList.remove('visible'); return; }
+  if (lensDirty) rebuildLens();
+  const { x, y } = pointerPosition;
+  halo.style.left = `${x}px`;
+  halo.style.top = `${y}px`;
+  magnified.style.transform = `translate(${105 - x * 1.5}px, ${105 - (y + window.scrollY) * 1.5}px) scale(1.5)`;
+  halo.classList.add('visible');
+}
+function hideLens() { cancelAnimationFrame(lensFrame); pointerPosition = null; halo.classList.remove('visible'); }
 document.addEventListener('pointermove', event => {
-  if (!cursorMedia.matches || reducedMotion.matches || event.pointerType === 'touch' || viewer.open) { hideHalo(); return; }
-  cancelAnimationFrame(cursorFrame);
-  cursorFrame = requestAnimationFrame(() => {
-    halo.style.left = `${event.clientX}px`;
-    halo.style.top = `${event.clientY}px`;
-    halo.classList.add('visible');
-    halo.classList.toggle('over-control', Boolean(event.target.closest('a,button,summary')));
-  });
+  if (event.pointerType === 'touch' || event.target.closest('#lens-toggle')) { hideLens(); return; }
+  pointerPosition = { x: event.clientX, y: event.clientY };
+  cancelAnimationFrame(lensFrame);
+  lensFrame = requestAnimationFrame(paintLens);
 }, { passive: true });
-document.documentElement.addEventListener('pointerleave', hideHalo);
-window.addEventListener('blur', hideHalo);
-document.addEventListener('keydown', hideHalo);
-reducedMotion.addEventListener('change', hideHalo);
-cursorMedia.addEventListener('change', hideHalo);
+document.addEventListener('scroll', event => {
+  if (event.target instanceof Element && event.target.closest('#cursor-halo')) return;
+  if (event.target !== document) lensDirty = true;
+  cancelAnimationFrame(lensFrame);
+  lensFrame = requestAnimationFrame(paintLens);
+}, { capture: true, passive: true });
+document.addEventListener('click', event => {
+  if (event.target.closest('#cursor-halo')) return;
+  refreshLens();
+});
+document.addEventListener('toggle', event => { if (!event.target.closest('#cursor-halo')) refreshLens(); }, true);
+document.addEventListener('load', event => { if (event.target instanceof HTMLImageElement && !event.target.closest('#cursor-halo')) refreshLens(); }, true);
+window.addEventListener('resize', refreshLens);
+document.fonts.ready.then(refreshLens);
+document.documentElement.addEventListener('pointerleave', hideLens);
+window.addEventListener('blur', hideLens);
+document.addEventListener('keydown', hideLens);
+reducedMotion.addEventListener('change', hideLens);
+cursorMedia.addEventListener('change', hideLens);
+lensToggle.addEventListener('click', () => {
+  lensEnabled = !lensEnabled;
+  lensToggle.setAttribute('aria-pressed', String(lensEnabled));
+  lensToggle.textContent = `Lupa 1,5× · ${lensEnabled ? 'ligada' : 'desligada'}`;
+  hideLens();
+});
 
