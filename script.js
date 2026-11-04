@@ -122,3 +122,30 @@ aiProjects.forEach(project => {
 });
 viewer.addEventListener('close', () => viewer.classList.remove('conversation-viewer'));
 
+// Decorative lens: core content stays readable without mouse interaction.
+const lensArea = document.querySelector('#lens-area');
+const lensMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
+let lensFrame = 0;
+function configureLens() {
+  lensArea?.classList.toggle('lens-ready', lensMedia.matches && !reducedMotion.matches);
+}
+if (lensArea) {
+  lensArea.addEventListener('pointermove', event => {
+    if (!lensArea.classList.contains('lens-ready')) return;
+    cancelAnimationFrame(lensFrame);
+    lensFrame = requestAnimationFrame(() => {
+      const bounds = lensArea.getBoundingClientRect();
+      lensArea.style.setProperty('--mx', `${event.clientX - bounds.left}px`);
+      lensArea.style.setProperty('--my', `${event.clientY - bounds.top}px`);
+    });
+  });
+  lensArea.addEventListener('pointerleave', () => {
+    cancelAnimationFrame(lensFrame);
+    lensArea.style.removeProperty('--mx');
+    lensArea.style.removeProperty('--my');
+  });
+  lensMedia.addEventListener('change', configureLens);
+  reducedMotion.addEventListener('change', configureLens);
+  configureLens();
+}
+
