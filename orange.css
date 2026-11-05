@@ -18,3 +18,9 @@ body{font-size:18px}.nav nav{font-size:15px}.hero-description{font-size:19px;lin
 @media(hover:none),(pointer:coarse),(prefers-reduced-motion:reduce){#cursor-halo,.lens-toggle{display:none!important}}
 
 
+
+/* Lupa de contraste: letras escuras dentro de um disco laranja. */
+#cursor-halo{background:#ff8846;border:0;box-shadow:none;outline:1px solid #ff8846;isolation:isolate}
+#cursor-halo .magnified-content{background:transparent}
+#cursor-halo .magnified-content *{color:#17110d!important;background-color:transparent!important;background-image:none!important;text-shadow:none!important;box-shadow:none!important;border-color:transparent!important;-webkit-text-fill-color:#17110d!important}
+#cursor-halo .magnified-content *::before,#cursor-halo .magnified-content *::after{color:#17110d!important;background-color:transparent!important;background-image:none!important;text-shadow:none!important;box-shadow:none!important;border-color:transparent!important}

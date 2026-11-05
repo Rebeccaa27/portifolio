@@ -76,7 +76,7 @@ viewer.addEventListener('close', () => viewer.classList.remove('conversation-vie
 
 
 
-// Real 1.5x magnification of a non-interactive copy of the visible layout.
+// Orange text reveal: an aligned, non-interactive copy clipped by a circle.
 const halo = document.querySelector('#cursor-halo');
 const magnified = halo.querySelector('.magnified-content');
 const lensToggle = document.querySelector('#lens-toggle');
@@ -132,17 +132,17 @@ function rebuildLens() {
   lensDirty = false;
 }
 function paintLens() {
-  if (!pointerPosition || !lensEnabled || !cursorMedia.matches || reducedMotion.matches) { halo.classList.remove('visible'); return; }
+  if (!pointerPosition || !lensEnabled || !cursorMedia.matches || reducedMotion.matches || viewer.open) { halo.classList.remove('visible'); return; }
   if (lensDirty) rebuildLens();
   const { x, y } = pointerPosition;
   halo.style.left = `${x}px`;
   halo.style.top = `${y}px`;
-  magnified.style.transform = `translate(${105 - x * 1.5}px, ${105 - (y + window.scrollY) * 1.5}px) scale(1.5)`;
+  magnified.style.transform = `translate(${105 - x}px, ${105 - (y + window.scrollY)}px)`;
   halo.classList.add('visible');
 }
 function hideLens() { cancelAnimationFrame(lensFrame); pointerPosition = null; halo.classList.remove('visible'); }
 document.addEventListener('pointermove', event => {
-  if (event.pointerType === 'touch' || event.target.closest('#lens-toggle')) { hideLens(); return; }
+  if (event.pointerType === 'touch' || event.target.closest('#lens-toggle, .shot, .conversation-stage, dialog')) { hideLens(); return; }
   pointerPosition = { x: event.clientX, y: event.clientY };
   cancelAnimationFrame(lensFrame);
   lensFrame = requestAnimationFrame(paintLens);
@@ -169,7 +169,7 @@ cursorMedia.addEventListener('change', hideLens);
 lensToggle.addEventListener('click', () => {
   lensEnabled = !lensEnabled;
   lensToggle.setAttribute('aria-pressed', String(lensEnabled));
-  lensToggle.textContent = `Lupa 1,5× · ${lensEnabled ? 'ligada' : 'desligada'}`;
+  lensToggle.textContent = `Lupa interativa · ${lensEnabled ? 'ligada' : 'desligada'}`;
   hideLens();
 });
 
