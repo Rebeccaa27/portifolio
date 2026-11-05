@@ -1,15 +1,49 @@
 const viewer = document.querySelector('#viewer');
 const viewerImage = document.querySelector('#viewer-image');
-document.querySelectorAll('[data-image]').forEach(button => {
-  button.addEventListener('click', () => {
-    viewerImage.src = button.dataset.image;
-    viewerImage.alt = button.querySelector('img').alt;
-    document.querySelector('#viewer-title').textContent = button.dataset.title;
-    viewer.showModal();
-    document.body.classList.add('modal-open');
-    document.querySelector('.viewer-scroll').scrollTo(0, 0);
-  });
+const viewerPrev = document.querySelector('#viewer-prev');
+const viewerNext = document.querySelector('#viewer-next');
+const viewerPosition = document.querySelector('#viewer-position');
+let viewerItems = [];
+let viewerIndex = 0;
+let viewerOnChange = null;
+function renderViewer() {
+  const item = viewerItems[viewerIndex];
+  viewerImage.src = item.src;
+  viewerImage.alt = item.alt || item.title || 'Imagem do projeto';
+  document.querySelector('#viewer-title').textContent = item.title || 'Imagem do projeto';
+  viewerPosition.textContent = `${viewerIndex + 1} de ${viewerItems.length}`;
+  viewerPrev.disabled = viewerIndex === 0;
+  viewerNext.disabled = viewerIndex === viewerItems.length - 1;
+  document.querySelector('.viewer-scroll').scrollTo(0, 0);
+  if (viewerOnChange) viewerOnChange(viewerIndex);
+}
+function openViewer(items, index, isConversation = false, onChange = null) {
+  viewerItems = items;
+  viewerIndex = index;
+  viewerOnChange = onChange;
+  viewer.classList.toggle('conversation-viewer', isConversation);
+  renderViewer();
+  viewer.showModal();
+  document.body.classList.add('modal-open');
+}
+function stepViewer(delta) {
+  const nextIndex = viewerIndex + delta;
+  if (nextIndex < 0 || nextIndex >= viewerItems.length) return;
+  viewerIndex = nextIndex;
+  renderViewer();
+}
+viewerPrev.addEventListener('click', () => stepViewer(-1));
+viewerNext.addEventListener('click', () => stepViewer(1));
+viewer.addEventListener('keydown', event => {
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    event.preventDefault();
+    stepViewer(event.key === 'ArrowLeft' ? -1 : 1);
+  }
 });
+viewer.addEventListener('close', () => { viewerItems = []; viewerOnChange = null; });
+const flowButtons = [...document.querySelectorAll('[data-image]')];
+const flowImages = flowButtons.map(button => ({ src: button.dataset.image, alt: button.querySelector('img').alt, title: button.dataset.title }));
+flowButtons.forEach((button, index) => button.addEventListener('click', () => openViewer(flowImages, index)));
 document.querySelector('#close-viewer').addEventListener('click', () => viewer.close());
 viewer.addEventListener('close', () => document.body.classList.remove('modal-open'));
 viewer.addEventListener('click', event => { if (event.target === viewer) viewer.close(); });
@@ -59,13 +93,12 @@ aiProjects.forEach(project => {
   back.addEventListener('click', () => { if (current > 0) { current--; renderConversation(); } });
   forward.addEventListener('click', () => { if (current < project.images.length - 1) { current++; renderConversation(); } });
   stage.addEventListener('click', () => {
-    viewerImage.src = picture.src;
-    viewerImage.alt = picture.alt;
-    viewer.classList.add('conversation-viewer');
-    document.querySelector('#viewer-title').textContent = `${project.name} — print ${current + 1} de ${project.images.length}`;
-    viewer.showModal();
-    document.body.classList.add('modal-open');
-    document.querySelector('.viewer-scroll').scrollTo(0, 0);
+    const images = project.images.map((item, index) => ({
+      src: item.src,
+      alt: item.alt || `${project.name}: print ${index + 1}`,
+      title: `${project.name} — print ${index + 1} de ${project.images.length}`
+    }));
+    openViewer(images, current, true, index => { current = index; renderConversation(); });
   });
   controls.append(back, position, forward);
   card.append(heading, description, stage, caption, controls);
