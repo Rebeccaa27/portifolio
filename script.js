@@ -76,7 +76,7 @@ viewer.addEventListener('close', () => viewer.classList.remove('conversation-vie
 
 
 
-// Orange text reveal: an aligned, non-interactive copy clipped by a circle.
+// 1.5x magnification with vivid orange background and black text.
 const halo = document.querySelector('#cursor-halo');
 const magnified = halo.querySelector('.magnified-content');
 const lensToggle = document.querySelector('#lens-toggle');
@@ -137,7 +137,7 @@ function paintLens() {
   const { x, y } = pointerPosition;
   halo.style.left = `${x}px`;
   halo.style.top = `${y}px`;
-  magnified.style.transform = `translate(${105 - x}px, ${105 - (y + window.scrollY)}px)`;
+  magnified.style.transform = `translate(${105 - x * 1.5}px, ${105 - (y + window.scrollY) * 1.5}px) scale(1.5)`;
   halo.classList.add('visible');
 }
 function hideLens() { cancelAnimationFrame(lensFrame); pointerPosition = null; halo.classList.remove('visible'); }
@@ -169,7 +169,7 @@ cursorMedia.addEventListener('change', hideLens);
 lensToggle.addEventListener('click', () => {
   lensEnabled = !lensEnabled;
   lensToggle.setAttribute('aria-pressed', String(lensEnabled));
-  lensToggle.textContent = `Lupa interativa · ${lensEnabled ? 'ligada' : 'desligada'}`;
+  lensToggle.textContent = `Lupa 1,5× · ${lensEnabled ? 'ligada' : 'desligada'}`;
   hideLens();
 });
 
