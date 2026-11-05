@@ -76,54 +76,6 @@ viewer.addEventListener('close', () => viewer.classList.remove('conversation-vie
 
 
 
-const sectionPopup = document.querySelector('#section-popup');
-const popupContent = document.querySelector('#popup-content');
-const popupTitles = { perfil: 'Perfil & formação', projetos: 'Automações', ias: 'IA em ação', codigo: 'Desenvolvimento com IA' };
-let movedSection = null;
-let sectionPlaceholder = null;
-function syncScrollLock() {
-  document.body.classList.toggle('modal-open', viewer.open || sectionPopup.open);
-}
-function restoreSection() {
-  if (movedSection && sectionPlaceholder) {
-    movedSection.hidden = true;
-    sectionPlaceholder.replaceWith(movedSection);
-  }
-  movedSection = null;
-  sectionPlaceholder = null;
-}
-document.querySelectorAll('a[href^="#"]').forEach(link => {
-  const id = link.getAttribute('href').slice(1);
-  if (!popupTitles[id]) return;
-  link.setAttribute('aria-haspopup', 'dialog');
-  link.addEventListener('click', event => {
-    event.preventDefault();
-    restoreSection();
-    const section = document.getElementById(id);
-    sectionPlaceholder = document.createComment('section home');
-    section.before(sectionPlaceholder);
-    movedSection = section;
-    section.hidden = false;
-    popupContent.replaceChildren(section);
-    document.querySelector('#section-popup-title').textContent = popupTitles[id];
-    if (!sectionPopup.open) sectionPopup.showModal();
-    popupContent.scrollTop = 0;
-    syncScrollLock();
-    refreshLens();
-  });
-});
-document.querySelector('#close-section').addEventListener('click', () => sectionPopup.close());
-sectionPopup.addEventListener('close', () => {
-  if (!sectionPopup.open) restoreSection();
-  syncScrollLock();
-  refreshLens();
-});
-sectionPopup.addEventListener('click', event => {
-  const bounds = sectionPopup.getBoundingClientRect();
-  if (event.target === sectionPopup && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) sectionPopup.close();
-});
-viewer.addEventListener('close', () => { syncScrollLock(); refreshLens(); });
-
 // Real 1.5x magnification of a non-interactive copy of the visible layout.
 const halo = document.querySelector('#cursor-halo');
 const magnified = halo.querySelector('.magnified-content');
@@ -146,7 +98,7 @@ function clearClone(clone) {
 function rebuildLens() {
   magnified.replaceChildren();
   magnified.style.width = `${document.documentElement.clientWidth}px`;
-  const modal = viewer.open ? viewer : sectionPopup.open ? sectionPopup : null;
+  const modal = viewer.open ? viewer : null;
   const parent = modal || document.body;
   if (halo.parentNode !== parent) parent.append(halo);
   if (modal) {
@@ -221,3 +173,5 @@ lensToggle.addEventListener('click', () => {
   hideLens();
 });
 
+
+viewer.addEventListener('close', refreshLens);
