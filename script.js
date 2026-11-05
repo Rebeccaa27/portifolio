@@ -82,7 +82,14 @@ const magnified = halo.querySelector('.magnified-content');
 const lensToggle = document.querySelector('#lens-toggle');
 const cursorMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-let lensEnabled = true;
+const lensPreferenceKey = 'portfolio-lens-enabled';
+let lensEnabled = false;
+try { lensEnabled = localStorage.getItem(lensPreferenceKey) === 'true'; } catch {}
+function updateLensToggle() {
+  lensToggle.setAttribute('aria-pressed', String(lensEnabled));
+  lensToggle.textContent = lensEnabled ? 'Desativar lupa' : 'Ativar lupa';
+}
+updateLensToggle();
 let lensDirty = true;
 let lensFrame = 0;
 let pointerPosition = null;
@@ -168,8 +175,8 @@ reducedMotion.addEventListener('change', hideLens);
 cursorMedia.addEventListener('change', hideLens);
 lensToggle.addEventListener('click', () => {
   lensEnabled = !lensEnabled;
-  lensToggle.setAttribute('aria-pressed', String(lensEnabled));
-  lensToggle.textContent = `Lupa 1,5× · ${lensEnabled ? 'ligada' : 'desligada'}`;
+  updateLensToggle();
+  try { localStorage.setItem(lensPreferenceKey, String(lensEnabled)); } catch {}
   hideLens();
 });
 
