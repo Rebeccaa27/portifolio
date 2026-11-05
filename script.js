@@ -215,3 +215,25 @@ lensToggle.addEventListener('click', () => {
 
 
 viewer.addEventListener('close', refreshLens);
+
+
+// Keep the same accessible toggle available after the header leaves the viewport.
+const lensHeader = document.querySelector('header.nav');
+const lensSlot = document.createElement('span');
+lensSlot.className = 'lens-toggle-slot';
+lensToggle.before(lensSlot);
+lensSlot.append(lensToggle);
+function reserveLensSpace() {
+  const bounds = lensToggle.getBoundingClientRect();
+  lensSlot.style.width = bounds.width ? `${bounds.width}px` : '';
+  lensSlot.style.height = bounds.height ? `${bounds.height}px` : '';
+}
+reserveLensSpace();
+const lensSizeObserver = new ResizeObserver(reserveLensSpace);
+lensSizeObserver.observe(lensToggle);
+const lensHeaderObserver = new IntersectionObserver(entries => {
+  const entry = entries[0];
+  const shouldFloat = !entry.isIntersecting && entry.boundingClientRect.bottom <= 0;
+  lensToggle.classList.toggle('is-floating', shouldFloat);
+}, { threshold: 0 });
+lensHeaderObserver.observe(lensHeader);
