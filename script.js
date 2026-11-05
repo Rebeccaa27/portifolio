@@ -85,7 +85,10 @@ function syncScrollLock() {
   document.body.classList.toggle('modal-open', viewer.open || sectionPopup.open);
 }
 function restoreSection() {
-  if (movedSection && sectionPlaceholder) sectionPlaceholder.replaceWith(movedSection);
+  if (movedSection && sectionPlaceholder) {
+    movedSection.hidden = true;
+    sectionPlaceholder.replaceWith(movedSection);
+  }
   movedSection = null;
   sectionPlaceholder = null;
 }
@@ -100,6 +103,7 @@ document.querySelectorAll('a[href^="#"]').forEach(link => {
     sectionPlaceholder = document.createComment('section home');
     section.before(sectionPlaceholder);
     movedSection = section;
+    section.hidden = false;
     popupContent.replaceChildren(section);
     document.querySelector('#section-popup-title').textContent = popupTitles[id];
     if (!sectionPopup.open) sectionPopup.showModal();
@@ -158,7 +162,19 @@ function rebuildLens() {
     }
   } else {
     for (const source of [...document.body.children]) {
-      if (source.matches('header,main,footer')) magnified.append(clearClone(source.cloneNode(true)));
+      if (source.matches('header,main,footer') && !source.hidden) {
+        const bounds = source.getBoundingClientRect();
+        const computed = getComputedStyle(source);
+        const copy = clearClone(source.cloneNode(true));
+        Object.assign(copy.style, {
+          position: 'absolute', margin: '0',
+          left: `${bounds.left}px`, top: `${bounds.top + window.scrollY}px`,
+          width: `${bounds.width}px`, height: `${bounds.height}px`,
+          display: computed.display, alignItems: computed.alignItems,
+          justifyContent: computed.justifyContent, flexDirection: computed.flexDirection
+        });
+        magnified.append(copy);
+      }
     }
   }
   lensDirty = false;
