@@ -40,3 +40,10 @@ body{font-size:18px}.nav nav{font-size:15px}.hero-description{font-size:19px;lin
 .nav .lens-toggle[aria-pressed="true"]{background:#ff8a42;color:#1b1007}
 @media(max-width:760px){.nav nav{gap:12px}.viewer-navigation{gap:12px}.viewer-navigation button{min-width:100px;padding:10px 12px;font-size:13px}#viewer-position{font-size:13px;min-width:50px}.nav .lens-toggle{font-size:12px;padding:8px 10px}}
 @media(hover:none),(pointer:coarse),(prefers-reduced-motion:reduce){.nav .lens-toggle{display:none!important}}
+
+/* O controle acompanha a leitura, sem duplicar o botão ou sua preferência. */
+.lens-toggle-slot{display:inline-flex;align-items:center;flex-shrink:0;vertical-align:middle}
+.nav .lens-toggle.is-floating{position:fixed;right:24px;bottom:24px;top:auto;left:auto;z-index:50;border-radius:30px;padding:12px 18px;box-shadow:0 6px 24px #0009;border-color:#ff8a42;background:#24160ff5;color:#ffbc8c}
+.nav .lens-toggle.is-floating[aria-pressed="true"]{background:#ff8a42;color:#1b1007}
+.nav .lens-toggle.is-floating:hover{background:#ff9f60;color:#1b1007}
+@media(max-width:760px){.nav .lens-toggle.is-floating{right:16px;bottom:18px;padding:10px 14px}}
